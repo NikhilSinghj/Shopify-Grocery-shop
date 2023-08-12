@@ -4,10 +4,10 @@ import json
 import re
 from .models import User 
 from .models import Category
-# from .models import Items
-# from .models import Order
+from .models import Items
+from .models import Order
 
-from django.contrib.auth import authenticate,login,logout,get_user_model
+from django.contrib.auth import authenticate,login,logout
 
 
 
@@ -57,26 +57,25 @@ def login_user(request):
         load=json.loads(request.body)
         username = load['username']
         password = load['password']
-        User=get_user_model()
         user=authenticate(username=username,password=password)
-        
+       
         if user is not None:
             if user.is_superuser:
                 login(request,user)
-                user_data=User.objects.get(username=username)
-                return JsonResponse({'message':'Logged in as Superuser','superuser':user_data.is_superuser})
+                return JsonResponse({'message':'Superuser logged in'})
+                
             else:
                 login(request,user)
-                user_data=User.objects.get(username=username)
-                return JsonResponse({'message':'Logged in as User','superuser':user_data.is_superuser})
-            # else:
-            #     return JsonResponse({'message':'Incorrect Username Or password','superuser':user_data.is_superuser})
+                return JsonResponse({'message':'User logged in'})
+            
+        else:
+            return JsonResponse({'message':'Incorrect Username Or password'},status=401)
         
     else:
         return JsonResponse({'messege':'Invalid Request Method'},status=400)
         
 
-def logout_user(request):
+def logout_user(request):   
     
     if request.method == 'GET':
         
@@ -92,24 +91,21 @@ def logout_user(request):
 
 
 from datetime import datetime
-# from django.contrib.auth.decorators import login_required
-
-# @login_required
 
 def add_category(request):
     if request.method == 'POST':
         if request.user.is_authenticated and request.user.is_superuser:
-            # request.COOKIES.get('logged_in_status')
-            category_name = request.POST.get('category_name')
+            # request.COOKIES.get('cookies')
+            # category_name = request.POST.get('category_name')
             category_image = request.FILES.get('category_image')
-            category_id=request.GET.get('category_id')
+            # category_id=request.GET.get('category_id')
             
-            if not category_name or not category_image or not category_id:
-                return JsonResponse({'message': 'Missing required field'})
-            else:
+            # if not category_name or not category_image or not category_id:
+            #     return JsonResponse({'message': 'Missing required field'})
+            # else:
         
-                Category.objects.create(category_name=category_name, category_image=category_image, category_id=category_id)
-                return JsonResponse({'message': 'Category uploaded successfully'})
+            Category.objects.create( category_image=category_image )
+            return JsonResponse({'message': 'Category uploaded successfully'})
         else:
             return JsonResponse({'message': 'You Are not authenticated'},status=401)
     
@@ -169,7 +165,7 @@ def add_item(request):
                 return JsonResponse({'message': 'Missing required field'})
             else:
         
-                Category.objects.create(items=items,product_category=product_category,product_name=product_name,price=price,unit=unit,image=image,product_quantity=product_quantity,description=description)
+                Items.objects.create(items=items,product_category=product_category,product_name=product_name,price=price,unit=unit,image=image,product_quantity=product_quantity,description=description)
                 return JsonResponse({'message': 'Item uploaded successfully'})
     
     elif request.method == 'PUT':
@@ -186,7 +182,7 @@ def add_item(request):
                 return JsonResponse({'message': 'Missing required field'}, status=400)
             else:
         
-                Category.objects.update(items=items,product_category=product_category,product_name=product_name,price=price,unit=unit,image=image,product_quantity=product_quantity,description=description)
+                Items.objects.update(items=items,product_category=product_category,product_name=product_name,price=price,unit=unit,image=image,product_quantity=product_quantity,description=description)
                 return JsonResponse({'message': 'Category uploaded successfully'})
     
             
@@ -198,22 +194,69 @@ def add_item(request):
         
             if not deleted_status:
                 return JsonResponse({'message': 'Missing required field'}, status=400)
+            else:
         
-        
-            category = Category.objects.get(deleted_status=False)  
-            category.deleted_status = True
-            category.deleted_date = datetime.now()
-            category.save()
+                item = Items.objects.get()  
+                item.deleted_status = True
+                item.save()
         
             return JsonResponse({'message': 'Category deleted successfully'})
 
     return JsonResponse({'message': 'Unauthorized'}, status=401)
+
+
+
+
+def order_item(request):
+    if request.method == 'POST':
+         load = json.loads(request.body)
+         user=load['user_id']
+         item=load['item_id']
+
+         
+
         
 
 
+# from django.conf import settings
+# import os
+
+def get_item(request):
+    if request.method == 'GET' :
+       items=list(Items.objects.values())
+       return JsonResponse(items,safe=False)
+    else:
+        return JsonResponse({'messege':'Invalid Request Method'},status=400)
+    
+
+def get_category(request):
+    if request.method == 'GET':
+        if request.user.is_authenticated and request.user.is_superuser:
+            load=json.loads(request.body)
+            cataegory_id=load['category_id']
+            # if Category.objects.filter(category_id=cataegory_id).exists():
+                
 
 
 
+
+
+
+       
+
+
+
+
+
+# def serve_image(request, image_name):
+#     image_path = os.path.join(settings.BASE_DIR, 'static', 'images', image_name)
+
+#     try:
+#         with open(image_path, 'rb') as f:
+#             image_data = f.read()
+#             return HttpResponse(image_data, content_type='image/jpeg')  
+#     except FileNotFoundError:
+#         return HttpResponse("Image not found", status=404)
 
 
 
