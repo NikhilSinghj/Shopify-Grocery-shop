@@ -62,11 +62,11 @@ def login_user(request):
         if user is not None:
             if user.is_superuser:
                 login(request,user)
-                return JsonResponse({'message':'Superuser logged in'})
+                return JsonResponse({'message':'Superuser logged in','is_superuser':user.is_superuser})
                 
             else:
                 login(request,user)
-                return JsonResponse({'message':'User logged in'})
+                return JsonResponse({'message':'User logged in','is_superuser':user.is_superuser})
             
         else:
             return JsonResponse({'message':'Incorrect Username Or password'},status=401)
@@ -96,16 +96,16 @@ def add_category(request):
     if request.method == 'POST':
         if request.user.is_authenticated and request.user.is_superuser:
             # request.COOKIES.get('cookies')
-            # category_name = request.POST.get('category_name')
+            load=json.loads(request.body.decode('utf-8'))
+            category_name = load.get['category_name']
             category_image = request.FILES.get('category_image')
-            # category_id=request.GET.get('category_id')
+            category_id = load.get['category_id']
             
-            # if not category_name or not category_image or not category_id:
-            #     return JsonResponse({'message': 'Missing required field'})
-            # else:
-        
-            Category.objects.create( category_image=category_image )
-            return JsonResponse({'message': 'Category uploaded successfully'})
+            if not category_name or not category_image or not category_id:
+                return JsonResponse({'message': 'Missing required field'})
+            else:
+                Category.objects.create( category_image=category_image )
+                return JsonResponse({'message': 'Category uploaded successfully'})
         else:
             return JsonResponse({'message': 'You Are not authenticated'},status=401)
     
@@ -313,5 +313,25 @@ def get_category(request):
         
         
         
+# from django.http import JsonResponse
+# from .models import Category
+
+# def get_all_categories(request):
+#     categories = Category.objects.all()
+#     category_list = []
+    
+#     for category in categories:
+#         category_data = {
+#             'category_id': category.category_id,
+#             'category_name': category.category_name,
+#             'category_image': category.category_image.url,
+#             'category_added_date': category.category_added_date,
+#             'category_deleted_date': category.category_deleted_date,
+#             'category_edited_date': category.category_edited_date,
+#             'deleted_status': category.deleted_status,
+#         }
+#         category_list.append(category_data)
+    
+#     return JsonResponse(category_list, safe=False)
 
 
