@@ -9,5 +9,6 @@ urlpatterns = [
      path('addcategory/',views.add_category),
      path('additem/',views.add_item),
      path('getitem/',views.get_item),
+     path('getcategory/',views.get_category),
   
 ]

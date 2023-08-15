@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'shopify',
     'corsheaders',
+    'sslserver',
 ]
 
 MIDDLEWARE = [
@@ -149,17 +150,13 @@ CORS_ALLOW_CREDENTIALS = True
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR,'media/')
 
-# STATICFILES_DIRS = [
-#     os.path.join(BASE_DIR, "static"),
-#     '/var/www/static/',
-# ]
+
+
 
 SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_HTTPONLY = True
+# SESSION_COOKIE_HTTPONLY = True
+SECURE_SSL_REDIRECT = True
 
 
-# CSRF_COOKIE_HTTPONLY = False
-# CSRF_COOKIE_SAMESITE = 'Strict'
 
-# SESSION_COOKIE_SAMESITE_KEYS = {'my-custom-cookies'}

@@ -95,46 +95,45 @@ from datetime import datetime
 def add_category(request):
     if request.method == 'POST':
         if request.user.is_authenticated and request.user.is_superuser:
-            # request.COOKIES.get('cookies')
-            load=json.loads(request.body.decode('utf-8'))
-            category_name = load.get['category_name']
-            category_image = request.FILES.get('category_image')
-            category_id = load.get['category_id']
             
-            if not category_name or not category_image or not category_id:
+            category_name = request.POST.get('category_name')
+            category_image = request.FILES.get('category_image')
+            
+            
+            if not category_name or not category_image :
                 return JsonResponse({'message': 'Missing required field'})
             else:
-                Category.objects.create( category_image=category_image )
-                return JsonResponse({'message': 'Category uploaded successfully'})
+                Category.objects.create( category_image=category_image,category_name=category_name )
+                return JsonResponse({'message': 'Category uploaded successfully'},status=201)
         else:
             return JsonResponse({'message': 'You Are not authenticated'},status=401)
     
     elif request.method == 'PUT':
         if request.user.is_authenticated and request.user.is_superuser:
-            load = json.loads(request.body)
-            category_id=load['category_id']
-            new_category_name = load['new_category_name']
-            new_category_image = request.FILES.get['new_category_image']
+            # load = json.loads(request.body)
+            id=request.POST.get('id')
+            new_category_name = request.POST.get('new_category_name')
+            new_category_image = request.FILES.get('new_category_image')
         
-            if not new_category_name or not new_category_image or not category_id:
+            if not new_category_name or not new_category_image or not id:
                 return JsonResponse({'message': 'Missing required field'}, status=400)
             else:
-                if Category.objects.filter(category_id=category_id).exists():
-                    Category.objects.create(category_name=new_category_name, category_image=new_category_image,category_edited_date = datetime.now())
+                if Category.objects.filter(id=id).exists():
+                    Category.objects.update(category_name=new_category_name, category_image=new_category_image,category_edited_date = datetime.now())
                     return JsonResponse({'message': 'Category updated successfully'})
                 else:
-                    return JsonResponse({'message': 'No category found for thi id'})
+                    return JsonResponse({'message': 'No category found for this id'})
     
     elif request.method == 'DELETE':
         if request.user.is_authenticated and request.user.is_superuser:
             load = json.loads(request.body)
-            category_id=load['category_id']
+            id=load['id']
         
-            if not category_id:
+            if not id:
                 return JsonResponse({'message': 'Missing required field'}, status=400)
             else:
-                category = Category.objects.get(category_id=category_id)
-                if category.category_id==category_id:  
+                category = Category.objects.get(id=id)
+                if Category.objects.filter(id=id).exists():  
                     category.deleted_status = True
                     category.category_deleted_date = datetime.now()
                     category.save()
@@ -142,7 +141,9 @@ def add_category(request):
                 else:
                     return JsonResponse({'message': 'Category id does not exists'})
 
-    return JsonResponse({'message': 'Unauthorized'}, status=401)
+        return JsonResponse({'message': 'Unauthorized'}, status=401)
+    else:
+        return JsonResponse({'messege':'Invalid Request Method'},status=400)
 
 
 
@@ -190,19 +191,24 @@ def add_item(request):
     elif request.method == 'DELETE':
         if request.user.is_authenticated and request.user.is_superuser:
             load = json.loads(request.body)
-            deleted_status = load('deleted_status')
+            id = load('id')
         
-            if not deleted_status:
+            if not id:
                 return JsonResponse({'message': 'Missing required field'}, status=400)
             else:
         
-                item = Items.objects.get()  
-                item.deleted_status = True
-                item.save()
+                item = Items.objects.get(id=id)
+                if Items.objects.filter(id=id).exists():  
+                    item.deleted_status = True
+                    
+                    item.save()
+                    return JsonResponse({'message': 'Item deleted successfully'})
+                else:
+                    return JsonResponse({'message': 'Item id does not exists'})
         
-            return JsonResponse({'message': 'Category deleted successfully'})
-
-    return JsonResponse({'message': 'Unauthorized'}, status=401)
+        return JsonResponse({'message': 'Unauthorized'}, status=401)
+    else:
+        return JsonResponse({'messege':'Invalid Request Method'},status=400)
 
 
 
@@ -229,13 +235,48 @@ def get_item(request):
         return JsonResponse({'messege':'Invalid Request Method'},status=400)
     
 
+
+import base64
+
+
+def get_all_categories(request):
+    categories = Category.objects.all()
+    category_list = []
+
+    for category in categories:
+        try:
+            category_image = category.category_image
+            if category_image:
+                with category_image.open() as img:
+                    image_base64 = base64.b64encode(img.read()).decode('utf-8')
+            else:
+                image_base64 = None
+        except ValueError: 
+            image_base64 = None
+
+        category_data = {
+            'category_id': category.category_id,
+            'category_name': category.category_name,
+            'category_image': image_base64,
+            'category_added_date': category.category_added_date,
+            'category_deleted_date': category.category_deleted_date,
+            'category_edited_date': category.category_edited_date,
+            'deleted_status': category.deleted_status,
+        }
+        category_list.append(category_data)
+
+    return JsonResponse(category_list, safe=False)
+
+
 def get_category(request):
     if request.method == 'GET':
         if request.user.is_authenticated and request.user.is_superuser:
-            load=json.loads(request.body)
-            cataegory_id=load['category_id']
-            # if Category.objects.filter(category_id=cataegory_id).exists():
-                
+            category=list(Category.objects.filter(deleted_status=False).values('id','category_name','category_image'))
+            return JsonResponse(category,safe=False)
+        else:
+            return JsonResponse({'message': 'You Are not authenticated'},status=401)
+    else:
+        return JsonResponse({'messege':'Invalid Request Method'},status=400)      
 
 
 
@@ -316,22 +357,6 @@ def get_category(request):
 # from django.http import JsonResponse
 # from .models import Category
 
-# def get_all_categories(request):
-#     categories = Category.objects.all()
-#     category_list = []
-    
-#     for category in categories:
-#         category_data = {
-#             'category_id': category.category_id,
-#             'category_name': category.category_name,
-#             'category_image': category.category_image.url,
-#             'category_added_date': category.category_added_date,
-#             'category_deleted_date': category.category_deleted_date,
-#             'category_edited_date': category.category_edited_date,
-#             'deleted_status': category.deleted_status,
-#         }
-#         category_list.append(category_data)
-    
-#     return JsonResponse(category_list, safe=False)
+
 
 
