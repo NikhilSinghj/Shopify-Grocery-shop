@@ -7,8 +7,11 @@ urlpatterns = [
      path('login/', views.login_user),
      path('logout/', views.logout_user),
      path('addcategory/',views.add_category),
-     path('additem/',views.add_item),
+     path('editcategory/',views.edit_category),
+     path('additem/',views.add_items),
      path('getitem/',views.get_item),
      path('getcategory/',views.get_category),
+     path('addtocart/',views.add_to_cart),
+     path('edititem/',views.edit_item),
   
 ]
