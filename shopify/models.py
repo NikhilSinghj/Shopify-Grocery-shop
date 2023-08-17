@@ -40,14 +40,27 @@ class Items(models.Model):
     deleted_status=models.BooleanField(default=False)
 
 
+
+class Cart(models.Model):
+    user=models.ForeignKey(User,on_delete=models.DO_NOTHING,null=True)
+    item=models.ForeignKey(Items,on_delete=models.DO_NOTHING,null=True)
+    product_category=models.ForeignKey(Category,on_delete=models.DO_NOTHING,null=True)
+    deleted_status=models.BooleanField(default=False)
+    quantity=models.IntegerField(default=0)
+
+
+
 class Order(models.Model):
     user=models.ForeignKey(User,on_delete=models.DO_NOTHING)
     item=models.ForeignKey(Items,on_delete=models.DO_NOTHING)
-    orderd=models.BooleanField(default=False)
+    # orderd=models.BooleanField(default=False)
     pruduct_name=models.CharField(max_length=30)
     ordered_quantity=models.IntegerField(default=0)
-    added_to_cart=models.BooleanField(default=False)
+    # added_to_cart=models.BooleanField(default=False)
     purchased=models.BooleanField(default=False)
+    purchased_date=models.DateTimeField(auto_now_add=True)
+
+    
 
 
 
