@@ -7,6 +7,7 @@ import re
 from .models import User,Category,Items,Cart,Order
 from datetime import datetime
 from django.contrib.auth import authenticate,login,logout
+from django.core.mail import send_mail
 
 
 # -----------------------------------------------------User-----------------------------------------------
@@ -39,6 +40,13 @@ def register_user(request):
                     return JsonResponse({'message':'Email Already exists'})
                 else:
                     User.objects.create_user(username=username,email=email,password=password)
+
+                    # subject = 'Registration Successful'
+                    # message = f'Thank you for registering. Your username: {username} and password: {password}'
+                    # from_email = 'your@example.com'
+                    # recipient_list = [email]
+                    # send_mail(subject, message, from_email, recipient_list)
+                    
                     return JsonResponse({'message':'You Are Registered Now'})
                
     else:
@@ -406,9 +414,10 @@ def buy_item(request):
                 order = Order(
                     user=request.user,
                     item=item,
-                    pruduct_name=item.product_name,
+                    product_name=item.product_name,
                     ordered_quantity=quantity,
-                    added_to_cart=True
+                    ordered_price=total_price,
+                    purchased=True
                 )
                 order.save()
     
@@ -429,39 +438,54 @@ def buy_item(request):
         return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+
+
+
+
+
+
 def buy_cart(request):
     if request.method == 'POST':
         if request.user.is_authenticated:
             user = request.user
-    
             cart_items = Cart.objects.filter(user=user, deleted_status=False)
-    
-            for cart_item in cart_items:
-                item = cart_item.item
-                quantity_to_order = cart_item.quantity
-    
+            
+            order_data = json.loads(request.body)
+            
+            for order_item in order_data:
+                item_id = order_item.get('item_id')
+                quantity_to_order = order_item.get('quantity')
+
+                item = Items.objects.filter(pk=item_id, product_quantity__gte=quantity_to_order).first()
+
+                if item is None:
+                    return JsonResponse({'error': f'Item with ID {item_id} not found or insufficient quantity.'}, status=400)
                 
+                order_price = item.price * quantity_to_order
+
                 Order.objects.create(
                     user=user,
                     item=item,
-                    pruduct_name=item.product_name,
+                    product_name=item.product_name,
                     ordered_quantity=quantity_to_order,
-                    added_to_cart=True,
+                    ordered_price=order_price,
                     purchased=True
                 )
-    
-                
+
                 item.product_quantity -= quantity_to_order
                 item.save()
-    
-                cart_item.deleted_status = True
-                cart_item.save()
-    
+
+            # Mark cart items as deleted
+            cart_items.update(deleted_status=True)
+
             return JsonResponse({'message': 'Order placed successfully.'})
         else:
-            return JsonResponse({'message': 'User not logged in'}, status=401)
+            return JsonResponse({'message': 'User not logged in.'}, status=401)
     else:
-        return JsonResponse({'error': 'Invalid request method.'},status=405)
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+
+
 
 
 

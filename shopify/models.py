@@ -53,12 +53,12 @@ class Cart(models.Model):
 class Order(models.Model):
     user=models.ForeignKey(User,on_delete=models.DO_NOTHING)
     item=models.ForeignKey(Items,on_delete=models.DO_NOTHING)
-    # orderd=models.BooleanField(default=False)
-    pruduct_name=models.CharField(max_length=30)
+    product_name=models.CharField(max_length=30)
     ordered_quantity=models.IntegerField(default=0)
-    # added_to_cart=models.BooleanField(default=False)
     purchased=models.BooleanField(default=False)
-    purchased_date=models.DateTimeField(auto_now_add=True)
+    ordered_price=models.FloatField()
+    ordered_date=models.DateTimeField(auto_now_add=True)
+
 
     
 

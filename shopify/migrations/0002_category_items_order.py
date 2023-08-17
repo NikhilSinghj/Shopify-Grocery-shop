@@ -43,17 +43,5 @@ class Migration(migrations.Migration):
                 ('product_category', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='shopify.Category')),
             ],
         ),
-        migrations.CreateModel(
-            name='Order',
-            fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('orderd', models.BooleanField(default=False)),
-                ('pruduct_name', models.CharField(max_length=30)),
-                ('ordered_quantity', models.IntegerField(default=0)),
-                ('added_to_cart', models.BooleanField(default=False)),
-                ('purchased', models.BooleanField(default=False)),
-                ('item', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to='shopify.Items')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, to=settings.AUTH_USER_MODEL)),
-            ],
-        ),
+        
     ]
