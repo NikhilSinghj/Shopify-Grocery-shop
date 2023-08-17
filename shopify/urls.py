@@ -10,8 +10,13 @@ urlpatterns = [
      path('editcategory/',views.edit_category),
      path('additem/',views.add_items),
      path('getitem/',views.get_item),
+     path('getallitem/',views.get_all_item),
      path('getcategory/',views.get_category),
      path('addtocart/',views.add_to_cart),
      path('edititem/',views.edit_item),
+     path('orderproduct/',views.buy_item),
+     path('ordercart/',views.buy_cart),
+     path('searchbypoi/',views.search_items),
+     
   
 ]
