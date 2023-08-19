@@ -264,7 +264,9 @@ def get_item(request):
     if request.method == 'GET' :
         id=request.GET.get('id')
         items=list(Items.objects.filter(deleted_status=False,product_category_id=id).values())
+        # items=list(Items.objects.latest('product_added_date'))
         return JsonResponse(items,safe=False)
+        # return JsonResponse({'messege':items})
        
     else:
         return JsonResponse({'messege':'Invalid Request Method'},status=400)
@@ -339,19 +341,24 @@ def add_to_cart(request):
         if item_id is None:
             return JsonResponse({'message': 'Item id does not exist'})
 
-        try:
-            item = Items.objects.get(pk=item_id)
-            category = item.product_category
+        item = Items.objects.filter(pk=item_id,deleted_status=False).first()
 
-            cart_item, created = Cart.objects.get_or_create(user=request.user, item=item, product_category=category)
-
-            if created:
-                return JsonResponse({'message': 'Item added to cart'})
-            else:
-                return JsonResponse({'message': 'Item already added to cart'})
-
-        except Items.DoesNotExist:
+        if item is None:
             return JsonResponse({'message': 'Item matching query does not exist'}, status=404)
+
+        category = item.product_category
+
+        cart_item, created = Cart.objects.get_or_create(user=request.user, item=item, product_category=category)
+
+        if created:
+            cart_item.quantity = 1
+        else:
+            cart_item.quantity += 1
+
+        cart_item.save()
+
+        return JsonResponse({'message': 'Item added to cart'})
+
     
     
     
@@ -364,7 +371,8 @@ def add_to_cart(request):
             'item__product_name',
             'item__price',
             'item__image',  
-            'product_category__category_name'
+            'product_category__category_name',
+            'quantity'
         )
 
         return JsonResponse(list(cart_items), safe=False)
@@ -378,10 +386,10 @@ def add_to_cart(request):
             if not item_id:
                 return JsonResponse({'message': 'Missing required field'}, status=400)
             else:
-                cart = Cart.objects.get(item_id=item_id)
+                cart = Cart.objects.filter(item_id=item_id)
                 if Cart.objects.filter(item_id=item_id).exists():  
-                    cart.deleted_status = True
-                    cart.save()
+                    cart.update(deleted_status = True)
+                    # cart.save()
                     return JsonResponse({'message': 'Cart deleted successfully'})
                 else:
                     return JsonResponse({'message': 'Item id does not exists'})
