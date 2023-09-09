@@ -40,15 +40,16 @@ def register_user(request):
                     return JsonResponse({'message':'Email Already exists'})
                 else:
                     User.objects.create_user(username=username,email=email,password=password)
-
-                    # subject = 'Registration Successful'
-                    # message = f'Thank you for registering. Your username: {username} and password: {password}'
-                    # from_email = 'your@example.com'
-                    # recipient_list = [email]
-                    # send_mail(subject, message, from_email, recipient_list)
-                    
+            
+                    subject = 'Registration Successful'
+                    message = f'Thank you for registering.Your username: {username} and password: {password}'
+                    from_email = 'nikhilsinghj80@gmail.com'
+                    to_email = [email]
+                    send_mail(subject, message, from_email, to_email,fail_silently=False)
+                
                     return JsonResponse({'message':'You Are Registered Now'})
-               
+                    
+
     else:
         return JsonResponse({'messege':'Invalid Request Method'},status=400)
 
@@ -322,7 +323,7 @@ def get_all_item(request):
         return JsonResponse(items,safe=False)
        
     else:
-        return JsonResponse({'messege':'Invalid Request Method'},status=400)
+        return JsonResponse({'messege':'Invalid Request Method'},status=405)
 
 
 
@@ -348,16 +349,21 @@ def add_to_cart(request):
 
         category = item.product_category
 
-        cart_item, created = Cart.objects.get_or_create(user=request.user, item=item, product_category=category)
+        cart_item, created = Cart.objects.get_or_create(user=request.user, item=item, product_category=category,deleted_status=False)
 
-        if created:
-            cart_item.quantity = 1
+        if not  created:
+            return JsonResponse({'message': 'Item already in cart'}, status=200)
+            
         else:
-            cart_item.quantity += 1
+            cart_item.quantity = 1
+            cart_item.save()
+            return JsonResponse({'message': 'Item added to cart'})
+   
+           
 
-        cart_item.save()
+        
 
-        return JsonResponse({'message': 'Item added to cart'})
+        
 
     
     
@@ -462,13 +468,13 @@ def buy_cart(request):
             
             for order_item in order_data:
                 item_id = order_item.get('item_id')
-                quantity_to_order = order_item.get('quantity')
+                # quantity_to_order = order_item.get('quantity')
 
-                item = Items.objects.filter(pk=item_id, product_quantity__gte=quantity_to_order).first()
+                item = Items.objects.filter(pk=item_id, product_quantity__gte=0).first()
 
                 if item is None:
                     return JsonResponse({'error': f'Item with ID {item_id} not found or insufficient quantity.'}, status=400)
-                
+                quantity_to_order=item.product_quantity
                 order_price = item.price * quantity_to_order
 
                 Order.objects.create(
@@ -489,8 +495,38 @@ def buy_cart(request):
             return JsonResponse({'message': 'Order placed successfully.'})
         else:
             return JsonResponse({'message': 'User not logged in.'}, status=401)
+        
+    
+    
+    
+    elif request.method == 'PUT':
+        if not request.user.is_authenticated:
+            return JsonResponse({'message': 'User not logged in'}, status=401)
+
+        load = json.loads(request.body)
+        item_id = load.get('item_id')
+        quantity= load.get('quantity')
+
+        if item_id is None:
+            return JsonResponse({'message': 'Item id does not exist'})
+
+        item = Items.objects.filter(pk=item_id,deleted_status=False).first()
+
+        if item is None:
+            return JsonResponse({'message': 'Item matching query does not exist'}, status=404)
+
+        category = item.product_category
+
+        cart_item, created = Cart.objects.get_or_create(user=request.user, item=item, product_category=category,deleted_status=False)
+
+        if not  created:
+            cart_item.quantity = quantity
+            cart_item.save()
+            return JsonResponse({'message': 'Item added to cart'})
+            
+        
     else:
-        return JsonResponse({'error': 'Invalid request method.'}, status=405)
+        return JsonResponse({'messege':'Invalid Request Method'},status=405)
 
 
 
@@ -500,33 +536,38 @@ def buy_cart(request):
 
 # -----------------------------------------------------Search-----------------------------------------------
 
-def search_items(request):
-    if request.method=='POST':
 
-        category_id = request.GET.get('category_id')
-        item_name = request.GET.get('item_name')
-    
-        items_query = Items.objects.filter(deleted_status=False)
-    
-        if category_id:
-            items_query2 = items_query.filter(product_category_id=category_id).values_list()
-    
-        if item_name:
-            items_query2 = items_query.filter(product_name__icontains=item_name).values_list()
-    
-        # items = items_query.values(
-        #     'product_name', 'price', 'unit', 'product_quantity', 'description', 'image'
-        # )
-    
-        # results = list(items) 
-    
-        if not items_query:
-            return JsonResponse({'message': 'No matching products found.'},status=404)
-    
-        return JsonResponse({'results': items_query2})
+
+from django.db.models import Q
+
+
+def search(request):
+    if request.method == 'GET':
+        search_query = request.GET.get('q', '')
+
+        products = Items.objects.filter(
+            Q(product_name__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(product_category__category_name__icontains=search_query),
+            deleted_status=False 
+        ).values('product_name', 'description')
+
+
+        product_data = list(products)
+
+        response_data = {}
+
+        if product_data:
+            response_data['products'] = product_data
+        else:
+            response_data['products'] = "No products found matching the query."
+
+        return JsonResponse(response_data, safe=False)
+
     else:
-        return JsonResponse({'error':'Invalid request method'},status=405)
-    
+        return JsonResponse({'error': 'Invalid request method.'}, status=405)
+
+
 
 
 
