@@ -31,6 +31,14 @@ AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend',)
 
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"
 
+# CORS_ALLOWED_ORIGINS = [
+#     "http://127.0.0.1:5500",  # Add the origins you want to allow here
+# ]
+
+# CORS_ORIGIN_WHITELIST = (
+#     'http://localhost:8000'
+# )
+
 
 # Application definition
 
@@ -157,6 +165,19 @@ SESSION_COOKIE_SECURE = True
 SESSION_COOKIE_SAMESITE = 'None'
 # SESSION_COOKIE_HTTPONLY = True
 SECURE_SSL_REDIRECT = True
+
+# Access-Control-Allow-Origin: *
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587  
+EMAIL_USE_TLS = True 
+EMAIL_HOST_USER = "nikhilsinghj80@gmail.com"  
+EMAIL_HOST_PASSWORD = 'ehbs xrkc jsen rhjh'
+
 
 
 

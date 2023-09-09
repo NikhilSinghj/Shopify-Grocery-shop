@@ -16,7 +16,7 @@ urlpatterns = [
      path('edititem/',views.edit_item),
      path('orderproduct/',views.buy_item),
      path('ordercart/',views.buy_cart),
-     path('searchbypoi/',views.search_items),
+     path('searchbypoi/',views.search),
      
   
 ]
