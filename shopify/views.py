@@ -16,7 +16,8 @@ def register_user(request):
     if request.method == 'POST':
 
         load=json.loads(request.body)
-
+        first_name=load['first_name']
+        last_name=load['last_name']
         username = load['username']
         email = load['email']
         password = load['password']
@@ -39,10 +40,10 @@ def register_user(request):
                 elif User.objects.filter(email=email).exists():
                     return JsonResponse({'message':'Email Already exists'})
                 else:
-                    User.objects.create_user(username=username,email=email,password=password)
+                    User.objects.create_user(first_name,last_name,username=username,email=email,password=password)
             
                     subject = 'Registration Successful'
-                    message = f'Thank you for registering.Your username: {username} and password: {password}'
+                    message = f'Thank you for registering.\nYour username: {username}'
                     from_email = 'nikhilsinghj80@gmail.com'
                     to_email = [email]
                     send_mail(subject, message, from_email, to_email,fail_silently=False)
@@ -65,13 +66,8 @@ def login_user(request):
         user=authenticate(username=username,password=password)
        
         if user is not None:
-            if user.is_superuser:
-                login(request,user)
-                return JsonResponse({'message':'Superuser logged in','is_superuser':user.is_superuser})
-                
-            else:
-                login(request,user)
-                return JsonResponse({'message':'User logged in','is_superuser':user.is_superuser})
+            login(request,user)
+            return JsonResponse({'message':'Superuser logged in','is_superuser':user.is_superuser})
             
         else:
             return JsonResponse({'message':'Incorrect Username Or password'},status=401)
@@ -108,8 +104,11 @@ def add_category(request):
             if not category_name or not category_image :
                 return JsonResponse({'message': 'Missing required field'})
             else:
-                Category.objects.create( category_image=category_image,category_name=category_name )
-                return JsonResponse({'message': 'Category uploaded successfully'},status=201)
+                category,created=Category.objects.get_or_create( category_image=category_image,category_name=category_name )
+                if not created:
+                    return JsonResponse({'message': 'Category Already exist for this name or image'},status=409)
+                else:
+                    return JsonResponse({'message': 'Category uploaded successfully'},status=201)
         else:
             return JsonResponse({'message': 'You Are not authenticated'},status=401)
     
@@ -319,7 +318,7 @@ def edit_item(request):
 
 def get_all_item(request):
     if request.method == 'GET' :
-        items=list(Items.objects.filter(deleted_status=False).values())
+        items=list(Items.objects.filter(deleted_status=False).values('id','product_name','image','description','price','unit','product_category__category_name'))
         return JsonResponse(items,safe=False)
        
     else:
@@ -347,9 +346,9 @@ def add_to_cart(request):
         if item is None:
             return JsonResponse({'message': 'Item matching query does not exist'}, status=404)
 
-        category = item.product_category
+        # category = item.product_category
 
-        cart_item, created = Cart.objects.get_or_create(user=request.user, item=item, product_category=category,deleted_status=False)
+        cart_item, created = Cart.objects.get_or_create(user=request.user, item=item,deleted_status=False)
 
         if not  created:
             return JsonResponse({'message': 'Item already in cart'}, status=200)
@@ -377,7 +376,6 @@ def add_to_cart(request):
             'item__product_name',
             'item__price',
             'item__image',  
-            'product_category__category_name',
             'quantity'
         )
 
@@ -417,11 +415,12 @@ def buy_item(request):
 
     if request.method == 'POST':
         if request.user.is_authenticated:
-            item_id = request.POST.get('item_id')
-            quantity = int(request.POST.get('quantity'))
+            load=json.loads(request.body)
+            item_id = load['item_id']
+            quantity = load['quantity']
     
             item = Items.objects.filter(id=item_id).first()
-    
+            print(item)
             if item and item.product_quantity >= quantity:
                 total_price = item.price * quantity
     
@@ -431,7 +430,7 @@ def buy_item(request):
                     product_name=item.product_name,
                     ordered_quantity=quantity,
                     ordered_price=total_price,
-                    purchased=True
+                
                 )
                 order.save()
     
@@ -454,27 +453,22 @@ def buy_item(request):
 
 
 
-
-
-
-
 def buy_cart(request):
     if request.method == 'POST':
         if request.user.is_authenticated:
             user = request.user
             cart_items = Cart.objects.filter(user=user, deleted_status=False)
             
-            order_data = json.loads(request.body)
-            
-            for order_item in order_data:
-                item_id = order_item.get('item_id')
-                # quantity_to_order = order_item.get('quantity')
+            if not cart_items.exists():
+                return JsonResponse({'error': 'No items in the cart to order.'}, status=400)
 
-                item = Items.objects.filter(pk=item_id, product_quantity__gte=0).first()
+            for cart_item in cart_items:
+                item = cart_item.item
+                quantity_to_order = cart_item.quantity
 
-                if item is None:
-                    return JsonResponse({'error': f'Item with ID {item_id} not found or insufficient quantity.'}, status=400)
-                quantity_to_order=item.product_quantity
+                if item.product_quantity < quantity_to_order:
+                    return JsonResponse({'error': f'Item with ID {item.pk} has insufficient quantity.'}, status=400)
+
                 order_price = item.price * quantity_to_order
 
                 Order.objects.create(
@@ -483,7 +477,7 @@ def buy_cart(request):
                     product_name=item.product_name,
                     ordered_quantity=quantity_to_order,
                     ordered_price=order_price,
-                    purchased=True
+                    
                 )
 
                 item.product_quantity -= quantity_to_order
@@ -495,9 +489,8 @@ def buy_cart(request):
             return JsonResponse({'message': 'Order placed successfully.'})
         else:
             return JsonResponse({'message': 'User not logged in.'}, status=401)
-        
-    
-    
+   
+ 
     
     elif request.method == 'PUT':
         if not request.user.is_authenticated:
@@ -508,21 +501,23 @@ def buy_cart(request):
         quantity= load.get('quantity')
 
         if item_id is None:
-            return JsonResponse({'message': 'Item id does not exist'})
+            return JsonResponse({'message': 'Item id does required'})
 
-        item = Items.objects.filter(pk=item_id,deleted_status=False).first()
+        # item = Items.objects.filter(pk=item_id,deleted_status=False).first()
 
-        if item is None:
-            return JsonResponse({'message': 'Item matching query does not exist'}, status=404)
+        # if item is None:
+        #     return JsonResponse({'message': 'Item matching query does not exist'}, status=404)
 
-        category = item.product_category
+        # category = item.product_category
 
-        cart_item, created = Cart.objects.get_or_create(user=request.user, item=item, product_category=category,deleted_status=False)
+        cart_item= Cart.objects.get(item_id=item_id,deleted_status=False)
 
-        if not  created:
+        if cart_item:
             cart_item.quantity = quantity
             cart_item.save()
-            return JsonResponse({'message': 'Item added to cart'})
+            return JsonResponse({'message': 'Quantity Increased'})
+        else:
+            return JsonResponse({'message': 'No item for This Id'})
             
         
     else:
@@ -555,14 +550,13 @@ def search(request):
 
         product_data = list(products)
 
-        response_data = {}
+        
 
         if product_data:
-            response_data['products'] = product_data
+            return JsonResponse(product_data, safe=False)
         else:
-            response_data['products'] = "No products found matching the query."
+            return JsonResponse({'message':"No products found matching the query."})
 
-        return JsonResponse(response_data, safe=False)
 
     else:
         return JsonResponse({'error': 'Invalid request method.'}, status=405)

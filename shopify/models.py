@@ -44,7 +44,6 @@ class Items(models.Model):
 class Cart(models.Model):
     user=models.ForeignKey(User,on_delete=models.DO_NOTHING,null=True)
     item=models.ForeignKey(Items,on_delete=models.DO_NOTHING,null=True)
-    product_category=models.ForeignKey(Category,on_delete=models.DO_NOTHING,null=True)
     deleted_status=models.BooleanField(default=False)
     quantity=models.IntegerField(default=0)
 
@@ -55,11 +54,11 @@ class Order(models.Model):
     item=models.ForeignKey(Items,on_delete=models.DO_NOTHING)
     product_name=models.CharField(max_length=30)
     ordered_quantity=models.IntegerField(default=0)
-    purchased=models.BooleanField(default=False)
     ordered_price=models.FloatField()
     ordered_date=models.DateTimeField(auto_now_add=True)
 
-
+    class Meta:
+        db_table = 'Order_item'        
     
 
 
